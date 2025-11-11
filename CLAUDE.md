@@ -9,26 +9,31 @@
 ## Technology Stack
 
 ### Core Framework
+
 - **Next.js 16** (App Router) - React-based full-stack framework with built-in routing, server components, and API routes
 - **React 19.2.0** - UI library for component composition
 - **TypeScript 5** - Strongly typed JavaScript for type safety
 
 ### Database & ORM
+
 - **Prisma 6.19.0** - Database ORM with type-safe database access
 - **SQLite** - Lightweight, file-based database (suitable for development/small deployments)
 - **Database file**: `prisma/dev.db` (created on first run)
 
 ### UI & Styling
+
 - **Tailwind CSS 4** - Utility-first CSS framework with modern features
 - **PostCSS 4** - CSS processor with Tailwind plugin
 - **Geist fonts** - Next.js official font family
 
 ### Data & State Management
+
 - **@tanstack/react-query 5.90.7** - Server state management with caching, synchronization, and background refetching
 - **Zod 4.1.12** - TypeScript-first schema validation library
 - **Papaparse 5.5.3** - CSV parsing library for transaction imports
 
 ### Development Tools
+
 - **ESLint 9** - JavaScript linter with Next.js configuration
 - **tsx 4.20.6** - TypeScript executor for Node.js scripts
 
@@ -71,26 +76,29 @@
 ## Key Architectural Patterns
 
 ### 1. Database Layer (Prisma Singleton Pattern)
+
 Located in: `/home/gab/apps/2511-radin-libre/src/lib/prisma.ts`
 
 ```typescript
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+  prisma: PrismaClient | undefined
+}
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 ```
 
 **Pattern Benefit**: Prevents multiple Prisma Client instances in Next.js development mode where modules are reloaded frequently. In development, the singleton is attached to globalThis; in production, a new instance is created per request.
 
 ### 2. Next.js App Router Architecture
+
 - **Server Components by default**: Pages and layouts are server components unless marked with `"use client"`
 - **Client Components**: Only `Navigation.tsx` uses `"use client"` because it needs `usePathname()` hook
 - **File-based routing**: URLs map directly to file structure (e.g., `/src/app/transactions/page.tsx` → `/transactions`)
 
 ### 3. Separation of Concerns
+
 - **`/app`**: Presentation and routing (Server + Client components)
 - **`/components`**: Reusable UI components
 - **`/domain`** (currently empty): Intended for pure business logic functions
@@ -98,6 +106,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 - **`/prisma`**: Data access schema and migrations
 
 ### 4. Language Convention
+
 - **Code**: English (comments, variable names, function names, filenames)
 - **UI**: French (all user-facing text in components)
 - Database seed includes French category names: "Alimentation", "Transport"
@@ -107,6 +116,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ### Models
 
 #### Category
+
 ```prisma
 model Category {
   id          Int           @id @default(autoincrement())
@@ -118,6 +128,7 @@ model Category {
 ```
 
 #### Transaction
+
 ```prisma
 model Transaction {
   id          Int       @id @default(autoincrement())
@@ -132,6 +143,7 @@ model Transaction {
 ```
 
 **Key Design Decisions**:
+
 - Transactions can exist without a category (null categoryId)
 - Categories have unique names (prevents duplicates)
 - Timestamps track creation and updates
@@ -176,6 +188,7 @@ npx prisma migrate dev --name <migration-name>
 ```
 
 ### Development Workflow
+
 1. **Initial Setup**: `npm install` → Database auto-initializes
 2. **Database Population**: `npm run db:seed` or `npx prisma migrate reset`
 3. **Development**: `npm run dev` → Runs on http://localhost:3000
@@ -184,12 +197,14 @@ npx prisma migrate dev --name <migration-name>
 ## Current State & Placeholders
 
 ### Implemented
+
 - Home page with hero text
 - Navigation bar with links (Accueil, Dépenses, Catégories)
 - Database models and seeding
 - Tailwind CSS styling
 
 ### Placeholders (To Be Implemented)
+
 - `/transactions` page - Full transaction management UI
 - `/categories` page - Category management UI
 - CSV import functionality (library `papaparse` included but not used)
@@ -201,26 +216,31 @@ npx prisma migrate dev --name <migration-name>
 ## Build & Deployment
 
 ### TypeScript Configuration
+
 - **Target**: ES2017
 - **Module Resolution**: Bundler (Next.js optimized)
 - **Path Alias**: `@/*` maps to root `/`
 - **Strict Mode**: Enabled for type safety
 
 ### Next.js Configuration
+
 - Currently minimal (`next.config.ts` is empty)
 - Uses default App Router behavior
 - Supports middleware and API routes if needed
 
 ### Testing Strategy
+
 Current: None implemented
 Planned: TDD for domain logic (per README)
 
 ## Environment Variables
 
 ### Required
+
 - `DATABASE_URL="file:./dev.db"` - SQLite database file path
 
 ### Optional
+
 - Set by `.env` file (currently untracked due to `.gitignore`)
 
 ## Design Principles Observed
@@ -235,16 +255,19 @@ Planned: TDD for domain logic (per README)
 ## Common Patterns & Gotchas
 
 ### Working with Prisma
+
 - Always import from `src/lib/prisma.ts`, not directly from `@prisma/client`
 - Use `await` with all database operations
 - Type safety: TypeScript catches schema mismatches at compile time
 
 ### React Server Components
+
 - Default in App Router; no `"use client"` needed unless using hooks
 - Async components for data fetching (`async function Page() {...}`)
 - Form actions and database calls can happen server-side
 
 ### Styling
+
 - Tailwind v4 with `@import "tailwindcss"` in CSS
 - CSS variables for theming (--background, --foreground)
 - Dark mode support via `prefers-color-scheme`
@@ -252,21 +275,25 @@ Planned: TDD for domain logic (per README)
 ## Next Steps for Development
 
 1. **Implement Transaction Page**:
+
    - Fetch transactions from database
    - Display in table/list format
    - Add filtering by category and date
 
 2. **Implement Category Management**:
+
    - CRUD operations for categories
    - Color picker for UI customization
    - Delete protection if categories have transactions
 
 3. **CSV Import Feature**:
+
    - Use `papaparse` to parse CSV files
    - Map CSV columns to Transaction fields
    - Validate data with Zod
 
 4. **React Query Integration**:
+
    - Set up query hooks for transactions and categories
    - Enable background refetching and caching
    - Implement optimistic updates
@@ -284,3 +311,10 @@ Planned: TDD for domain logic (per README)
 - Add tests to `/src/domain/` functions as they're created (TDD approach)
 - Tailwind is configured with v4 syntax; use modern utilities
 - Database uses SQLite for development; can be switched via Prisma `datasource.provider`
+
+# More instructions from the developper
+
+- Use clean architecture.
+- Try to always extract code from UI component to custom hooks. Hooks can use usecase business rules.
+- Create tests for business logic, use TDD.
+- Run npm run build and npm run test after coding / answering the user and fix issues.

@@ -52,8 +52,14 @@
 │   │       └── page.tsx            # Categories page "/categories" (placeholder)
 │   ├── components/                 # Reusable UI components
 │   │   └── Navigation.tsx           # Client-side navigation bar component
-│   ├── domain/                      # (Empty) Business logic layer
-│   │   └── [To be filled]           # Pure functions for domain logic
+│   ├── domain/                      # Business logic layer (pure functions)
+│   │   ├── types.ts                 # Domain type definitions
+│   │   ├── analysis.ts              # Pareto analysis functions
+│   │   ├── analysis.test.ts         # Tests for Pareto analysis
+│   │   ├── statistics.ts            # Statistical calculations
+│   │   ├── statistics.test.ts       # Tests for statistics
+│   │   ├── filters.ts               # Transaction filtering & sorting
+│   │   └── filters.test.ts          # Tests for filters
 │   └── lib/                         # Utilities and singleton services
 │       └── prisma.ts               # Prisma client singleton with development safeguards
 ├── prisma/                         # Database schema and migrations
@@ -67,6 +73,7 @@
 ├── next.config.ts                  # Next.js configuration
 ├── postcss.config.mjs              # PostCSS configuration for Tailwind
 ├── eslint.config.mjs               # ESLint configuration
+├── vitest.config.ts                # Vitest test configuration
 ├── prisma.config.ts                # Prisma CLI configuration
 ├── .env                            # Environment variables (DATABASE_URL)
 ├── .gitignore                      # Git ignore rules
@@ -169,6 +176,18 @@ npm lint
 
 # Seed database with sample data
 npm run db:seed
+
+# Run tests in watch mode (auto-rerun on file changes)
+npm test
+
+# Run tests once (for CI/CD)
+npm run test:run
+
+# Run tests with visual UI interface
+npm run test:ui
+
+# Run tests with coverage report
+npm run test:coverage
 ```
 
 ### Prisma Commands (from CLI)
@@ -230,8 +249,37 @@ npx prisma migrate dev --name <migration-name>
 
 ### Testing Strategy
 
-Current: None implemented
-Planned: TDD for domain logic (per README)
+**Framework**: Vitest 4.0.8 with full TypeScript support
+
+**Test Coverage**: 84 tests across 3 test suites
+- Analysis tests: 14 tests
+- Statistics tests: 25 tests
+- Filter tests: 45 tests
+
+**Configuration**: See [vitest.config.ts](vitest.config.ts)
+- Node environment for pure logic tests
+- Path aliases configured (`@/*` → `./src/*`)
+- Global test utilities (describe, it, expect)
+- Coverage reporting with v8 provider
+
+**Test Organization**:
+All tests colocated with source files in `/src/domain/`:
+```
+src/domain/
+├── types.ts              # Domain type definitions
+├── analysis.ts           # Pareto analysis logic
+├── analysis.test.ts      # 14 tests for Pareto calculations
+├── statistics.ts         # Statistical functions
+├── statistics.test.ts    # 25 tests for stats calculations
+├── filters.ts            # Transaction filtering
+└── filters.test.ts       # 45 tests for filtering & sorting
+```
+
+**Running Tests**:
+- `npm test` - Watch mode (auto-rerun on changes)
+- `npm run test:run` - Run once (CI/CD)
+- `npm run test:ui` - Visual UI at http://localhost:51204
+- `npm run test:coverage` - Generate coverage report
 
 ## Environment Variables
 
@@ -252,7 +300,74 @@ Planned: TDD for domain logic (per README)
 5. **Scalability**: App Router ready for API routes; Prisma scalable across databases
 6. **User Experience**: French UI text; Tailwind for responsive design
 
+## Domain Layer (Business Logic)
+
+The `/src/domain/` directory contains pure functions for business logic, fully tested with Vitest.
+
+### Module: [analysis.ts](src/domain/analysis.ts)
+**Purpose**: Pareto analysis (80/20 rule) for expense optimization
+
+**Key Functions**:
+- `calculateParetoAnalysis(transactions, categories)` - Identifies which 20% of categories represent 80% of spending
+- `getParetoCount(analysis)` - Returns number of high-impact categories
+- `isParetoCategory(categoryId, analysis)` - Checks if a category is in the Pareto group
+
+**Use Cases**:
+- Homepage dashboard showing top spending categories
+- Recommendations for which categories to focus on for savings
+
+### Module: [statistics.ts](src/domain/statistics.ts)
+**Purpose**: Statistical calculations for spending analysis
+
+**Key Functions**:
+- `calculateSpendingStats(transactions)` - Comprehensive stats (total, average, median, min, max)
+- `calculateStatsByCategory(transactions)` - Per-category statistics
+- `calculateDailyAverage(transactions, startDate, endDate)` - Average spending per day
+- `calculateMonthlyAverage(transactions, startDate, endDate)` - Average spending per month
+- `calculateStandardDeviation(transactions)` - Measure of spending volatility
+- `findOutliers(transactions, threshold)` - Identify unusually high expenses
+
+**Use Cases**:
+- Monthly spending reports
+- Budget vs. actual comparisons
+- Detecting anomalous spending patterns
+
+### Module: [filters.ts](src/domain/filters.ts)
+**Purpose**: Transaction filtering, sorting, and searching
+
+**Key Functions**:
+- Date filters: `filterByDateRange`, `filterCurrentMonth`, `filterByMonth`, `filterLastNDays`
+- Category filters: `filterByCategory`, `filterByCategories`, `filterUncategorized`, `filterCategorized`
+- Amount filters: `filterByMinAmount`, `filterByMaxAmount`, `filterByAmountRange`
+- Search: `searchByDescription`
+- Sorting: `sortByDate`, `sortByAmount`
+- Composition: `composeFilters` - Chain multiple filters together
+
+**Use Cases**:
+- Transaction list page with filters
+- Search functionality
+- Date range selectors (e.g., "Last 30 days")
+
+### Module: [types.ts](src/domain/types.ts)
+**Purpose**: Domain type definitions (independent of database schema)
+
+**Key Types**:
+- `Transaction` - Core transaction type
+- `Category` - Category type
+- `CategorySpending` - Aggregated spending per category
+- `ParetoAnalysisResult` - Result of Pareto analysis
+- `SpendingStats` - Statistical summary
+
+**Design Pattern**: These types mirror database models but are independent, allowing the domain layer to remain decoupled from Prisma.
+
 ## Common Patterns & Gotchas
+
+### Working with Domain Logic
+
+- **Pure Functions**: All domain functions are pure (no side effects, same input = same output)
+- **Immutability**: Functions return new arrays/objects instead of mutating inputs
+- **Composability**: Functions can be chained using `composeFilters` and similar patterns
+- **Test Coverage**: All domain logic has comprehensive unit tests (edge cases, happy paths, error conditions)
 
 ### Working with Prisma
 
@@ -272,45 +387,94 @@ Planned: TDD for domain logic (per README)
 - CSS variables for theming (--background, --foreground)
 - Dark mode support via `prefers-color-scheme`
 
+### Testing
+
+- Use `npm test` for watch mode during development
+- All domain functions have tests colocated in `.test.ts` files
+- Test pattern: Describe blocks for function, nested describes for happy path / edge cases
+- Use `toBeCloseTo()` for floating-point comparisons
+- Mock data should be realistic and cover boundary conditions
+
 ## Next Steps for Development
 
-1. **Implement Transaction Page**:
+### Completed ✅
+- **Domain Logic Layer**: Fully implemented with Pareto analysis, statistics, and filters (84 tests passing)
+- **Testing Infrastructure**: Vitest configured with full test suite
 
-   - Fetch transactions from database
+### To Do
+
+1. **Implement Transaction Page** (`/transactions`):
+   - Fetch transactions from database using Prisma
    - Display in table/list format
-   - Add filtering by category and date
+   - Integrate filter functions from `src/domain/filters.ts`
+   - Add search bar using `searchByDescription()`
+   - Date range picker using `filterByDateRange()`
 
-2. **Implement Category Management**:
-
+2. **Implement Category Management** (`/categories`):
    - CRUD operations for categories
    - Color picker for UI customization
    - Delete protection if categories have transactions
+   - Display category spending using `calculateStatsByCategory()`
 
-3. **CSV Import Feature**:
+3. **Dashboard with Pareto Analysis** (homepage):
+   - Use `calculateParetoAnalysis()` to show top spending categories
+   - Visual chart showing 80/20 distribution
+   - Spending statistics using `calculateSpendingStats()`
+   - Outlier detection using `findOutliers()`
 
+4. **CSV Import Feature**:
    - Use `papaparse` to parse CSV files
    - Map CSV columns to Transaction fields
-   - Validate data with Zod
+   - Validate data with Zod schemas
+   - Bulk insert to database
 
-4. **React Query Integration**:
-
+5. **React Query Integration**:
    - Set up query hooks for transactions and categories
    - Enable background refetching and caching
-   - Implement optimistic updates
-
-5. **Domain Logic Layer**:
-   - Implement Pareto analysis (80/20 rule)
-   - Spending trend calculations
-   - Export functions as pure functions in `/src/domain/`
+   - Implement optimistic updates for better UX
 
 ## Notes for Future Claude Instances
 
-- This codebase is in early development with placeholder pages
+### Code Organization
+- This codebase follows a clean architecture with clear separation between layers
 - Follow existing patterns: French UI text, English code, server components by default
 - Always use Prisma singleton from `src/lib/prisma.ts`
-- Add tests to `/src/domain/` functions as they're created (TDD approach)
 - Tailwind is configured with v4 syntax; use modern utilities
 - Database uses SQLite for development; can be switched via Prisma `datasource.provider`
+
+### Testing Philosophy
+- **TDD Approach**: Domain logic layer is fully tested with 84 passing tests
+- **Pure Functions**: All domain functions are pure, making them easy to test
+- **Comprehensive Coverage**: Tests include happy paths, edge cases, and error conditions
+- **Colocated Tests**: Test files are placed next to source files (e.g., `analysis.ts` + `analysis.test.ts`)
+- **Fast Feedback**: Use `npm test` in watch mode during development
+- **CI/CD Ready**: Use `npm run test:run` for continuous integration
+
+### When Adding New Features
+1. **Start with domain logic**: Write pure functions in `/src/domain/`
+2. **Write tests first** (TDD): Create `.test.ts` file with test cases
+3. **Implement the function**: Make tests pass
+4. **Integrate in UI**: Use the domain functions in your React components
+5. **Keep layers separate**: Database (Prisma) → Domain (pure functions) → UI (React components)
+
+### Domain Functions Usage Examples
+```typescript
+// In a Server Component or API route
+import { prisma } from '@/lib/prisma';
+import { calculateParetoAnalysis } from '@/domain/analysis';
+import { filterByDateRange } from '@/domain/filters';
+
+// Fetch from DB
+const transactions = await prisma.transaction.findMany();
+const categories = await prisma.category.findMany();
+
+// Apply domain logic
+const filtered = filterByDateRange(transactions, startDate, endDate);
+const analysis = calculateParetoAnalysis(filtered, categories);
+
+// Return to UI
+return analysis.paretoCategories;
+```
 
 # More instructions from the developper
 
@@ -318,3 +482,4 @@ Planned: TDD for domain logic (per README)
 - Try to always extract code from UI component to custom hooks. Hooks can use usecase business rules.
 - Create tests for business logic, use TDD.
 - Run npm run build and npm run test after coding / answering the user and fix issues.
+- After coding, if you have new information and you can enhance this CLAUDE.md file, ask user if he whant you to do it.

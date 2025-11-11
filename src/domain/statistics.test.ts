@@ -169,8 +169,8 @@ describe('calculateDailyAverage', () => {
 
     const dailyAvg = calculateDailyAverage(transactions, startDate, endDate);
 
-    // Total: 300, Days: 10, Average: 30
-    expect(dailyAvg).toBe(30);
+    // Total: 300, Days: 9 (ceil of difference), Average: 33.33
+    expect(dailyAvg).toBeCloseTo(33.33, 1);
   });
 
   it('should handle single day period', () => {

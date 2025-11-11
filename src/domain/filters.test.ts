@@ -414,7 +414,8 @@ describe('composeFilters', () => {
     ]);
 
     // Categorized + amount >= 50 + sorted by date ascending
-    expect(result.length).toBe(2); // Groceries (150) and Restaurant (80)
-    expect(result[0].id).toBe(1); // Oldest first
+    // Results: ID 1 (150, cat 1), ID 2 (50, cat 2), ID 3 (80, cat 1)
+    expect(result.length).toBe(3);
+    expect(result[0].id).toBe(1); // Oldest first (2024-01-15)
   });
 });
